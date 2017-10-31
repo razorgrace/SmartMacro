@@ -321,59 +321,61 @@ addonNamespace.MyMacros = {
         name = 'AP',
         global = true,
         init = function (api)
-            local getAmount = (function ()
-                local tooltipScanner = (function ()
-                    local id = 0
+            local tooltipScanner = (function ()
+                local id = 0
 
-                    local function findLine(tooltip, pattern)
-                        local loaded = false
-                        
-                        for i = 1, tooltip:NumLines() do
-                            local fontString = _G[tooltip:GetName() .. 'TextLeft' ..i]
-                            if fontString then
-                                local text = fontString:GetText()
-    
-                                if (type(text) == 'string') then
-                                    if text:match(pattern) then
-                                        return text
-                                    end
-    
-                                    loaded = true
+                local function findLine(tooltip, pattern)
+                    if tooltip:NumLines() == 0 then
+                        return nil
+                    end
+
+                    for i = 1, tooltip:NumLines() do
+                        local fontString = _G[tooltip:GetName() .. 'TextLeft' ..i]
+                        if fontString then
+                            local text = fontString:GetText()
+
+                            if text == RETRIEVING_ITEM_INFO then
+                                return nil
+                            end
+
+                            if (type(text) == 'string') then
+                                if text:match(pattern) then
+                                    return text
                                 end
                             end
                         end
-    
-                        if loaded then
-                            return false
-                        else
-                            return nil
-                        end
                     end
-    
-                    return function (pattern)
-                        id = id + 1
 
-                        local tooltip = CreateFrame("GameTooltip", addonName .. 'ScannerTooltip' .. id, nil, "GameTooltipTemplate")
+                    return false
+                end
+
+                return function (pattern)
+                    id = id + 1
+
+                    local tooltip = CreateFrame("GameTooltip", addonName .. 'ScannerTooltip' .. id, UIParent, "GameTooltipTemplate")
+
+                    local cache = setmetatable({}, { __index = function (self, link)
                         tooltip:SetOwner(UIParent, "ANCHOR_NONE")
+                        tooltip:SetHyperlink(link)
+                        local text = findLine(tooltip, pattern)
+                        tooltip:Hide()
+                        self[link] = text
+                        return text
+                    end })
 
-                        local cache = setmetatable({}, { __index = function (self, link)
-                            tooltip:SetHyperlink(link)
-                            local text = findLine(tooltip, pattern)
-                            self[link] = text
-                            return text
-                        end })
-
-                        return function (link)
-                            return cache[link]
-                        end
+                    return function (link)
+                        return cache[link]
                     end
-                end)()
+                end
+            end)()
 
-                local isApToken = tooltipScanner('\124cFFE6CC80' .. ARTIFACT_POWER .. '\124r')
-                local getUseLine = tooltipScanner( '^' .. USE)                
+            local getTagLine = tooltipScanner('\|cFFE6CC80' .. ARTIFACT_POWER .. '\|r')
+
+            local getAmount = (function ()
+                local getUseLine = tooltipScanner( '^' .. USE_COLON) -- ITEM_SPELL_TRIGGER_ON_USE
                 
                 local function getArtifactPowerAmount(link)
-                    local itemString = link:match('\124H(item:%d+:.-)\124h')
+                    local itemString = link:match('\|H(item:%d+:.-)\|h')
 
                     if not itemString then
                         return 0
@@ -473,19 +475,9 @@ addonNamespace.MyMacros = {
                 end
                 
                 local cache = setmetatable({}, { __index = function (self, link)                
-                    local amount = nil
-
-                    local flag = isApToken(link)
-
-                    if flag == false then
-                        amount = 0
-                    elseif flag ~= nil then
-                        amount = getArtifactPowerAmount(link)
-                    end
-    
+                    local amount = getArtifactPowerAmount(link)
                     self[link] = amount
-    
-                    return amount
+                        return amount
                 end })
 
                 return function (link)
@@ -502,46 +494,85 @@ addonNamespace.MyMacros = {
                     cache = nil
                 end)
 
-                local function scan()
-                    local total = 0
-                    local list = {}
+                local function scanBagSlot(bagIndex, bagSlotIndex)
+                    local amount = 0
+                    local link = GetContainerItemLink(bagIndex, bagSlotIndex)
 
-                    for bagIndex = 0, NUM_BAG_SLOTS do
-                        for bagSlotIndex = 1, GetContainerNumSlots(bagIndex) do
-                            local link = GetContainerItemLink(bagIndex, bagSlotIndex)
-                            if type(link) == 'string' and link:match("item:%d+") then
-                                local amount = getAmount(link)
+                    if (type(link) == 'string') and link:match("item:%d+") then
+                        local tagLine = getTagLine(link)
 
-                                if amount == nil then
-                                    return nil
-                                end
+                        if tagLine == nil then
+                            return nil
+                        end
 
-                                if amount > 0 then
-                                    total = total + amount
-
-                                    table.insert(list, {
-                                        link = link,
-                                        amount = amount,
-                                        bag = bagIndex,
-                                        slot = bagSlotIndex,
-                                    })
-                                end
+                        if tagLine then
+                            amount = getAmount(link)
+                                    
+                            if not amount then
+                                return nil
                             end
                         end
                     end
-
-                    return total, list
+                
+                    return {
+                        link = link,
+                        amount = amount,
+                        bag = bagIndex,
+                        slot = bagSlotIndex,
+                    }
                 end
+
+                function scanBag(bagIndex)
+                    local result = {}
+                    local partial = false
+
+                    for bagSlotIndex = 1, GetContainerNumSlots(bagIndex) do
+                        local item = scanBagSlot(bagIndex, bagSlotIndex)
+
+                        if not item then
+                            partial = true
+                        elseif item.amount > 0 then
+                            table.insert(result, item)
+                        end
+                    end
+                    
+                    return result, partial
+                end
+
+                local function scanAllBags()
+                    local total = 0
+                    local list = {}
+                    local partial = false
+
+                    for bagIndex = 0, NUM_BAG_SLOTS do
+                        local bagList, partialBag = scanBag(bagIndex)
+
+                        for _, item in ipairs(bagList) do
+                            table.insert(list, item)
+                            total = total + item.amount
+                        end
+
+                        if partialBag then
+                            partial = true
+                        end
+                    end
+
+                    return total, list, partial
+                end
+
+                SBS = scanBagSlot
+                SB = scanBag
+                SAB = scanAllBags
     
                 return function ()
                     if not cache then
-                        local total, list = scan()
+                        local total, list, partial = scanAllBags()
 
-                        if not total then
-                            return 0, {}
+                        if partial then
+                            return total, list, partial
                         end
 
-                        cache = { total, list }
+                        cache = { total, list, partial }
                     end
 
                     return unpack(cache)
@@ -550,7 +581,7 @@ addonNamespace.MyMacros = {
             
             return {
                 scanBags = scanBags,
-
+                
                 OnUpdateTooltip = function (frame, tooltip)
                     local total, list = scanBags()
 
