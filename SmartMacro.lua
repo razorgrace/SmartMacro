@@ -631,13 +631,13 @@ local function initializeAddon(frame)
         end
     end
 
-    hooksecurefunc("ActionButton_SetTooltip", function (self)
-        setCurrentMacro(findMacroByButtonFrame(self))
-    end)
+    addonNamespace.SetTooltipCallback = function (frame)
+        setCurrentMacro(findMacroByButtonFrame(frame))
+    end
 
-    hooksecurefunc("GameTooltip_OnHide", function (self)
+    addonNamespace.HideTooltipCallback = function ()
         setCurrentMacro(nil)
-    end)
+    end
 
     persistentStorage.dump = nil
     -- persistentStorage.dump = (function ()

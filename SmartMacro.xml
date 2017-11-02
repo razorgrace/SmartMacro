@@ -2,5 +2,7 @@
 ..\FrameXML\UI.xsd">
 	<Script file="Database.lua"/>
 	<Script file="MyMacros.lua"/>
+	<Script file="Popup.lua"/>
+	<Script file="Integration/BlizzardUI.lua"/>
 	<Script file="SmartMacro.lua"/>
 </Ui>
