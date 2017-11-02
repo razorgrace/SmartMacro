@@ -136,23 +136,41 @@ function findFrames()
 
     local frame = EnumerateFrames()
     while frame do
-       if frame:IsVisible() then
-          if type(frame.GetObjectType) == 'function' and frame:GetObjectType() == 'CheckButton' and type(frame.action) == 'number' then
-             local type, id, subType, spellID = GetActionInfo(frame.action)
+        if frame:IsVisible() then
+            if type(frame.GetObjectType) == 'function' and frame:GetObjectType() == 'CheckButton' and type(frame.GetAttribute) == 'function' then
+                local ourKey = '$$SmartMacroFlag'
+                if not frame[ourKey] then
+                    frame[ourKey] = true
+                    frame:HookScript("OnClick", function (self, button, down)
+                        -- print(...)
+                    end)
+                end
 
-             if type == 'macro' then
-                local name, texture, body = GetMacroInfo(id)
-                if name ~= nil then
-                    local id = extractIdFromTaggedMacroName(name)
-                    if id ~= nil then
-                        if result[id] == nil then
-                            result[id] = {}
+                local type = frame:GetAttribute('type')
+                local macroId = nil
+
+                if type == 'action' then
+                    local actionType, id, _, _ = GetActionInfo(frame:GetAttribute('action'))
+                    if actionType == 'macro' then
+                        macroId = id
+                    end
+                elseif type == 'macro' then
+                    macroId = frame:GetAttribute('macro')
+                end
+
+                if macroId then
+                    local name, texture, body = GetMacroInfo(macroId)
+                    if name ~= nil then
+                        local id = extractIdFromTaggedMacroName(name)
+                        if id ~= nil then
+                            if result[id] == nil then
+                                result[id] = {}
+                            end
+                            table.insert(result[id], frame)
                         end
-                        table.insert(result[id], frame)
                     end
                 end
-             end
-          end
+            end
        end
        frame = EnumerateFrames(frame)
     end
@@ -546,7 +564,7 @@ local function initializeAddon(frame)
     initStorage(persistentStorage)
     initStorage(transientStorage)
     initStorage(privateTransientStorage)
-    
+
     local previous = GetTime()
     local interval = 1
     local gathered = false
