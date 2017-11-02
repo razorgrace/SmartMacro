@@ -4,5 +4,6 @@
 	<Script file="MyMacros.lua"/>
 	<Script file="Popup.lua"/>
 	<Script file="Integration/BlizzardUI.lua"/>
+	<Script file="Integration/ButtonForge.lua"/>
 	<Script file="SmartMacro.lua"/>
 </Ui>
