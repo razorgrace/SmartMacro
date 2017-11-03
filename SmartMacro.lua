@@ -58,6 +58,8 @@ local function extractIdFromTaggedMacroName(name)
     return type(name) == 'string' and tonumber(name:match('<SM(%d+)>'))
 end
 
+addonNamespace.extractIdFromTaggedMacroName = extractIdFromTaggedMacroName
+
 local function splitIntoLines(text)
     local result = {}
     for str in string.gmatch(text, "[^\n\r]+") do
@@ -129,53 +131,6 @@ local function flattenSmartMacro(desc)
     local lines = splitIntoLines(desc.text)
     local code, args = convertSmartMacroToLuaCode(desc.env, lines)
     return shortenMacro(loadstring(code)(unpack(args)))
-end
-
-function findFrames()
-    local result = {}
-
-    local frame = EnumerateFrames()
-    while frame do
-        if frame:IsVisible() then
-            if type(frame.GetObjectType) == 'function' and frame:GetObjectType() == 'CheckButton' and type(frame.GetAttribute) == 'function' then
-                local ourKey = '$$SmartMacroFlag'
-                if not frame[ourKey] then
-                    frame[ourKey] = true
-                    frame:HookScript("OnClick", function (self, button, down)
-                        -- print(...)
-                    end)
-                end
-
-                local type = frame:GetAttribute('type')
-                local macroId = nil
-
-                if type == 'action' then
-                    local actionType, id, _, _ = GetActionInfo(frame:GetAttribute('action'))
-                    if actionType == 'macro' then
-                        macroId = id
-                    end
-                elseif type == 'macro' then
-                    macroId = frame:GetAttribute('macro')
-                end
-
-                if macroId then
-                    local name, texture, body = GetMacroInfo(macroId)
-                    if name ~= nil then
-                        local id = extractIdFromTaggedMacroName(name)
-                        if id ~= nil then
-                            if result[id] == nil then
-                                result[id] = {}
-                            end
-                            table.insert(result[id], frame)
-                        end
-                    end
-                end
-            end
-       end
-       frame = EnumerateFrames(frame)
-    end
-
-    return result
 end
 
 local function formatMacroTag(id)
@@ -587,28 +542,16 @@ local function initializeAddon(frame)
             -- if previous == nil or current - previous >= interval then
                 -- previous = current
     
-                local storage = getGlobalStorage(privateTransientStorage)
-                storage.previousFrames = getGlobalStorage(privateTransientStorage).currentFrames or {}
-                storage.currentFrames = findFrames()
-    
+                addonNamespace.ScanFrames()
+
                 for k, v in pairs(addonNamespace.MyMacros) do
-                    if storage.currentFrames[v.id] then
+                    if addonNamespace.MacroHasFrames(v.id) then
                         updateMacro(v)
                     end
                 end
             -- end
         end
     end)
-
-    local function findMacroByButtonFrame(self)
-        for id, frames in pairs(getGlobalStorage(privateTransientStorage).currentFrames or {}) do
-            for _, frame in pairs(frames) do
-                if self == frame then
-                    return addonNamespace.MyMacros[id]
-                end
-            end
-        end
-    end
 
     local lastMacro = nil
 
@@ -632,7 +575,7 @@ local function initializeAddon(frame)
     end
 
     addonNamespace.SetTooltipCallback = function (frame)
-        setCurrentMacro(findMacroByButtonFrame(frame))
+        setCurrentMacro(addonNamespace.FindMacroByFrame(frame))
     end
 
     addonNamespace.HideTooltipCallback = function ()
