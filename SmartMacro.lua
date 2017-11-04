@@ -180,145 +180,6 @@ local function findMacro(desc, global)
     return nil
 end
 
-local function generatePlayerStatus(db)
-    local result = {}
-
-    local function static(index, records, indexer, predicate)
-        local subset = {}
-
-        for _, record in pairs(records) do
-            if indexer(record) == index and predicate(record) then
-                return function () return true end
-            end
-        end
-    end
-
-    local function dynamic(index, records, indexer, predicate)
-        local subset = {}
-
-        for _, record in pairs(records) do
-            if indexer(record) == index then
-                table.insert(subset, record)
-            end
-        end
-
-        if next(subset) then
-            return function ()
-                for _, record in pairs(subset) do
-                    if predicate(record) then
-                        return true
-                    end
-                end
-
-                return false
-            end
-        end
-    end
-
-    local getters = setmetatable({}, {
-        __index = function (self, index)
-            self[index] =
-                static(
-                    index,
-                    db.races,
-                    function (race) return 'is' .. toCamelCase(race.name) end,
-                    function (race) return (select(2, UnitRace('player'))) == race.tag end
-                )
-                or static(
-                    index,
-                    db.classes,
-                    function (class) return 'is' .. toCamelCase(class.name) end,
-                    function (class) return (select(3, UnitClass('player'))) == class.id end
-                )
-                or dynamic(
-                    index,
-                    db.roles,
-                    function (role) return 'is' .. toCamelCase(role.name) end,
-                    function (role) return role.tag == (select(5, GetSpecializationInfo(GetSpecialization()))) end
-                )
-                or dynamic(
-                    index,
-                    db.specializations,
-                    function (specialization) return 'is' .. toCamelCase(specialization.name) end,
-                    function (specialization) return specialization.id == (select(1, GetSpecializationInfo(GetSpecialization()))) end
-                )
-                or dynamic(
-                    index,
-                    db.specializations,
-                    function (specialization) return 'is' .. toCamelCase(specialization.name) .. toCamelCase(db.classes[specialization.classId].name) end,
-                    function (specialization) return specialization.id == (select(1, GetSpecializationInfo(GetSpecialization()))) end
-                )
-                or dynamic(
-                    index,
-                    db.talents,
-                    function (talent) return 'uses' .. toCamelCase(talent.name) end,
-                    function (talent) return (select(4, GetTalentInfo(talent.tier, talent.column, 1))) end
-                )
-                or dynamic(
-                    index,
-                    db.talents,
-                    function (talent) return 'has' .. toCamelCase(talent.name) end,
-                    function (talent) return (select(5, GetTalentInfo(talent.tier, talent.column, 1))) end
-                )
-                or dynamic(
-                    index,
-                    db.primaryStats,
-                    function (primaryStat) return 'uses' .. toCamelCase(primaryStat.name) end,
-                    function (primaryStat) return (select(6, GetSpecializationInfo(GetSpecialization()))) == primaryStat.id end
-                )
-                or function () return nil end
-            return self[index]
-        end
-    })
-
-    return setmetatable(result, {        
-        __index = function (self, index)
-            return getters[index]()
-        end
-    })
-end
-
--- local spellQuery = {
---     name = function (spellID) return (GetSpellInfo(spellID)) end,
---     texture = function (spellID) return (select(4, GetSpellInfo(spellID))) end,
--- }
-
-local function generateSpellQuery()
-    local result = {}
-    
-    setmetatable(result, {
-        __index = function (self, index)
-            -- if spellQuery[index] then
-            --     return spellQuery[index](spellID)
-            -- else
-            --     error('Unknown spell index requested: ' .. tostring(index))
-            -- end
-
-            for _, spell in pairs(addonNamespace.Database.spells) do
-                if not spell or not spell.name then
-                    print('Bad spell in DB: #' .. spell.id)
-                elseif toCamelCase(spell.name) == index then
-                    self[index] = setmetatable(
-                        {
-                            id = spell.id,
-                            name = (GetSpellInfo(spell.id)),
-                            icon = spell.icon,
-                        },
-                        {
-                            __tostring = function (self)
-                                return self.name
-                            end,
-                        }
-                    )
-                    return self[index]
-                end
-            end
-        end,
-    })
-
-    return result
-end
-
 local function initMacro(desc)
     if desc.initialized then
         return
@@ -352,8 +213,8 @@ local function initMacro(desc)
         setName = function (value) desc.name = value end,
         setIcon = function (value) desc.icon = value or DEFAULT_ICON end,
 
-        player = generatePlayerStatus(addonNamespace.Database),
-        spell = generateSpellQuery(),
+        spell = addonNamespace.GetSpellMetaObject(),
+        player = addonNamespace.GetPlayerMetaObject(),
     }
 
     if type(desc.init) == 'function' then
@@ -522,19 +383,11 @@ local function initializeAddon(frame)
 
     local previous = GetTime()
     local interval = 1
-    local gathered = false
 
     frame:SetScript('OnUpdate', function ()
         local current = GetTime()
         if current - previous >= interval then
             previous = current
-    
-            if not gathered then
-                gathered = true
-                persistentStorage.dump2 = addonNamespace.updateDatabase(persistentStorage.dump2 or {})
-                S = generatePlayerStatus(addonNamespace.Database)
-                A = generateSpellQuery()                
-            end
         end
     
         if not InCombatLockdown() then
