@@ -32,9 +32,12 @@ local function findFrames()
                 local macroId = nil
 
                 if type == 'action' then
-                    local actionType, id, _, _ = GetActionInfo(frame:GetAttribute('action'))
-                    if actionType == 'macro' then
-                        macroId = id
+                    local action = frame:GetAttribute('action')
+                    if action then
+                        local actionType, id, _, _ = GetActionInfo(frame:GetAttribute('action'))
+                        if actionType == 'macro' then
+                            macroId = id
+                        end
                     end
                 elseif type == 'macro' then
                     macroId = frame:GetAttribute('macro')
