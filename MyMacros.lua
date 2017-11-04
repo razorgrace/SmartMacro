@@ -8,80 +8,28 @@ addonNamespace.MyMacros = function ()
                 trigger = '[mod]',
                 name = 'Travel',
                 icon = 'achievement_guildperk_mountup',
-                env = {
-                    env = 'env',
-                },
                 init = function (api)
-                    -- LoadAddOn("Blizzard_MountCollection")
-        
-                    local function findMountJournalIdBySpellId(id)
-                        return api.cache('findMountJournalIdBySpellId/' .. id, function ()
-                            for mountID = 1, C_MountJournal.GetNumMounts() do
-                                local creatureName, spellID, icon, active, isUsable, sourceType, isFavorite, isFactionSpecific, faction, hideOnChar, isCollected, mountID = C_MountJournal.GetMountInfoByID(mountID)
-                                if spellID == id and isUsable then
-                                    return mountID
-                                end
-                            end
-                        end)
-                    end
-        
                     return {
-                        class = function () return select(2, UnitClass('player')) end,
-        
                         specialMount = function ()
-                            return findMountJournalIdBySpellId(122708) or -- Grand Expedition Yak
-                                findMountJournalIdBySpellId(61425) or -- Traveler's Tundra Mammoth
-                                0 -- random favorite mount
+                            return (api.mount.GrandExpeditionYak.isUsable and api.mount.GrandExpeditionYak.id)
+                                or (api.mount.TravelersTundraMammoth.isUsable and api.mount.TravelersTundraMammoth.id)
+                                or 0
                         end,
-        
-                        ShamanGhostWolf = function () return (GetSpellInfo(2645)) end,
-                        DruidTravelForm = function () return (GetSpellInfo(783)) end,
-        
-                        hasMagicBroom = function () return GetItemCount(37011) > 0 end,
-                        MagicBroom = function () return (GetItemInfo(37011)) end,
                     }
                 end,
                 text = [[
                     #showtooltip
                     /stopmacro [flying]
-        
-                    if class() == 'DRUID' then
+
+                    /run C_MountJournal.SummonByID(SecureCmdOptionParse("[mod]") and {{specialMount()}} or 0)
+                    /run UIErrorsFrame:Clear()
+
+                    if api.player.isDruid then
                         -- /click MountJournalSummonRandomFavoriteButton
-                        /run C_MountJournal.SummonByID(SecureCmdOptionParse("[mod]") and {{specialMount()}} or 0)
-                        /run UIErrorsFrame:Clear()
-                        /use {{DruidTravelForm()}}
-                    else
-                        /run C_MountJournal.SummonByID(SecureCmdOptionParse("[mod]") and {{specialMount()}} or 0)
-                        /run UIErrorsFrame:Clear()
-            
-                        if hasMagicBroom() then
-                            /cancelaura {{MagicBroom()}}
-                            /use [nocombat,noindoors] {{MagicBroom()}}
-                        end
-            
-                        if hasMagicBroom() then
-                            /cancelaura {{MagicBroom()}}
-                            /use [nocombat,noindoors] {{MagicBroom()}}
-                        end
-        
-                        if class() == 'SHAMAN' then
-                            /use {{ShamanGhostWolf()}}
-                        end
+                        /use {{api.spell.TravelForm}}
+                    elseif api.player.isShaman
+                        /use {{api.spell.GhostWolf}}
                     end
-        
-                    -- local flag = api.getLocalStorage().flag
-                
-                    -- for k, button in pairs(api.getFrames()) do
-                    --     if flag then
-                    --         ActionButton_ShowOverlayGlow(button)
-                    --     else
-                    --         ActionButton_HideOverlayGlow(button)
-                    --     end
-                    -- end
-        
-                    -- api.getLocalStorage().flag = not flag
-        
-                    -- api.setIcon(SecureCmdOptionParse("[mod]") and 132243 or 134400)
                 ]],
             },
             [2] = {
