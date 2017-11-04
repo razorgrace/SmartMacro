@@ -1,8 +1,15 @@
 ## Interface: 70300
 ## Title: SmartMacro
 ## Version: 0.0.0
-## DefaultState: Enabled
-## LoadOnDemand: 0
+## DefaultState: enabled
 ## SavedVariables: SmartMacroSaved
 
-SmartMacro.xml
+Database.lua
+Frames.lua
+Integration/BlizzardUI.lua
+Integration/ButtonForge.lua
+Main.lua
+MyMacros.lua
+Popup.lua
+SmartMacro.lua
+Tooltips.lua

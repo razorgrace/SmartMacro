@@ -1,13 +1,15 @@
 local addonName, addonNamespace = ...
 
-hooksecurefunc("ActionButton_SetTooltip", function (self)
-    if addonNamespace.SetTooltipCallback then
-        addonNamespace.SetTooltipCallback(self)
-    end
-end)
+if not addonNamespace.Integration then
+    addonNamespace.Integration = {}
+end
 
-hooksecurefunc("GameTooltip_OnHide", function (self)
-    if addonNamespace.HideTooltipCallback then
-        addonNamespace.HideTooltipCallback(self)
-    end
-end)
+addonNamespace.Integration.BlizzardUI = function (Tooltips)
+    hooksecurefunc("ActionButton_SetTooltip", function (self)
+        Tooltips.SetTooltipCallback(self)
+    end)
+    
+    hooksecurefunc("GameTooltip_OnHide", function (self)
+        Tooltips.HideTooltipCallback(self)
+    end)        
+end

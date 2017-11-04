@@ -69,25 +69,29 @@ local function findFrames()
     return result
 end
 
-addonNamespace.ScanFrames = function ()
-    storage.previousFrames = storage.currentFrames
-    storage.currentFrames = findFrames()
-end
-
-addonNamespace.GetFrames = function ()
-    return storage.currentFrames
-end
-
-addonNamespace.FindMacroByFrame = function (ref)
-    for id, frames in pairs(storage.currentFrames) do
-        for _, frame in pairs(frames) do
-            if ref == frame then
-                return addonNamespace.MyMacros[id]
+addonNamespace.Frames = function (MyMacros)
+    return {
+        ScanFrames = function ()
+            storage.previousFrames = storage.currentFrames
+            storage.currentFrames = findFrames()
+        end,
+        
+        -- GetFrames = function ()
+        --     return storage.currentFrames
+        -- end,
+        
+        FindMacroByFrame = function (ref)
+            for id, frames in pairs(storage.currentFrames) do
+                for _, frame in pairs(frames) do
+                    if ref == frame then
+                        return MyMacros.List[id]
+                    end
+                end
             end
-        end
-    end
-end
-
-addonNamespace.MacroHasFrames = function (id)
-    return storage.currentFrames[id] ~= nil
+        end,
+        
+        MacroHasFrames = function (id)
+            return storage.currentFrames[id] ~= nil
+        end,
+    }
 end
