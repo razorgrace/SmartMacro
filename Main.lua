@@ -216,8 +216,9 @@ addonNamespace.Main = function (Database, Frames, MyMacros)
     
             spell = Database.GetSpellMetaObject(),
             player = Database.GetPlayerMetaObject(),
+            mount = Database.GetMountMetaObject(),
         }
-    
+
         if type(desc.init) == 'function' then
             for k, v in pairs(desc.init(desc.env.api) or {}) do
                 desc.env[k] = v
