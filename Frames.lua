@@ -6,12 +6,20 @@ local storage = {
 }
 
 local function findFrames()
+    local total = 0
+    local buttons = 0
+    local macroButtons = 0
+    local smartMacroButtons = 0
     local result = {}
 
     local frame = EnumerateFrames()
     while frame do
+        total = total + 1
+
         if frame:IsVisible() then
             if type(frame.GetObjectType) == 'function' and frame:GetObjectType() == 'CheckButton' and type(frame.GetAttribute) == 'function' then
+                buttons = buttons + 1
+
                 local ourKey = '$$SmartMacroFlag'
                 if not frame[ourKey] then
                     frame[ourKey] = true
@@ -33,10 +41,14 @@ local function findFrames()
                 end
 
                 if macroId then
+                    macroButtons = macroButtons + 1
+
                     local name, texture, body = GetMacroInfo(macroId)
                     if name ~= nil then
                         local id = addonNamespace.extractIdFromTaggedMacroName(name)
                         if id ~= nil then
+                            smartMacroButtons = smartMacroButtons + 1
+
                             if result[id] == nil then
                                 result[id] = {}
                             end
@@ -48,6 +60,11 @@ local function findFrames()
        end
        frame = EnumerateFrames(frame)
     end
+
+    -- print('total = ' .. total)
+    -- print('buttons = ' .. buttons)
+    -- print('macroButtons = ' .. macroButtons)
+    -- print('smartMacroButtons = ' .. smartMacroButtons)
 
     return result
 end
