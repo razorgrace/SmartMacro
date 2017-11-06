@@ -131,7 +131,11 @@ addonNamespace.Main = function (Database, Frames, MyMacros)
     local function flattenSmartMacro(desc)
         local lines = splitIntoLines(desc.text)
         local code, args = convertSmartMacroToLuaCode(desc.env, lines)
-        return shortenMacro(loadstring(code)(unpack(args)))
+        local func, err = loadstring(code)
+        if err then
+            error(err)
+        end
+        return shortenMacro(func(unpack(args)))
     end
     
     local function formatMacroTag(id)
