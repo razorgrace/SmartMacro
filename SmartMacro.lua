@@ -18,10 +18,11 @@ end
 
 local frame = CreateFrame('FRAME', nil, UIParent)
 
-frame:RegisterEvent('ADDON_LOADED')
+frame:RegisterEvent('PLAYER_ENTERING_WORLD')
 
 frame:SetScript('OnEvent', function (self, event, arg1)
-    if event == "ADDON_LOADED" and arg1 == addonName then
+    if event == 'PLAYER_ENTERING_WORLD' then
+        self:SetScript('OnEvent', nil)
         EntryPoint()
     end
 end)
