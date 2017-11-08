@@ -25,3 +25,7 @@ elseif api.player.isDeathKnight then
     /cast {{api.spell.WraithWalk}}
 end
 ```
+
+## To Do
+
+* remove macro length limit (like in ncBiggerMacros)
