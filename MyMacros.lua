@@ -5,29 +5,25 @@ addonNamespace.MyMacros = function ()
         List = {
             [1] = {
                 id = 1,
-                trigger = '[mod]',
                 name = 'Travel',
-                icon = 'achievement_guildperk_mountup',
-                init = function (api)
-                    return {
-                        specialMount = function ()
-                            return (api.mount.GrandExpeditionYak.isUsable and api.mount.GrandExpeditionYak.id)
-                                or (api.mount.TravelersTundraMammoth.isUsable and api.mount.TravelersTundraMammoth.id)
-                                or 0
-                        end,
-                    }
-                end,
                 text = [[
                     #showtooltip
                     /stopmacro [flying]
 
-                    /run C_MountJournal.SummonByID(SecureCmdOptionParse("[mod]") and {{specialMount()}} or 0)
+                    if api.mount.GrandExpeditionYak.isUsable then
+                        /cast [mod] {{api.mount.GrandExpeditionYak}}
+                    elseif api.mount.TravelersTundraMammoth.isUsable then
+                        /cast [mod] {{api.mount.TravelersTundraMammoth}}
+                    end
+
+                    /run C_MountJournal.SummonByID(0)
                     /run UIErrorsFrame:Clear()
 
                     if api.player.isDruid then
+                        -- LoadAddOn("Blizzard_PetJournal")
                         -- /click MountJournalSummonRandomFavoriteButton
                         /use {{api.spell.TravelForm}}
-                    elseif api.player.isShaman
+                    elseif api.player.isShaman then
                         /use {{api.spell.GhostWolf}}
                     end
                 ]],
@@ -121,6 +117,8 @@ addonNamespace.MyMacros = function ()
                         /cast {{api.spell.Dash}}
                     elseif api.player.isDeathKnight then
                         /cast {{api.spell.WraithWalk}}
+                    elseif api.player.isHunter then
+                        /cast {{api.spell.AspectOfTheCheetah}}
                     end
                 ]],
             },
@@ -589,6 +587,42 @@ addonNamespace.MyMacros = function ()
                         api.setIcon(130775)
                         for _, frame in ipairs(api.getFrames()) do
                             _G[frame:GetName() .. 'Name']:Hide()
+                        end
+                    end
+                ]],
+            },
+            [8] = {
+                id = 8,
+                name = 'Immunity',
+                text = [[
+                    #showtooltip
+    
+                    if api.player.isHunter then
+                        /cancelaura [mod] {{api.spell.AspectOfTheTurtle}}
+                        /stopmacro [mod]
+                        /cast {{api.spell.AspectOfTheTurtle}}
+                    elseif api.player.isPaladin then
+                        /cancelaura [mod] {{api.spell.DivineShield}}
+                        /stopmacro [mod]
+                        /cast {{api.spell.DivineShield}}
+                    end
+                ]],
+            },
+            [9] = {
+                id = 9,
+                name = 'Interrupt/Slow',
+                text = [[
+                    #showtooltip
+
+                    /stopcasting
+    
+                    if api.player.isHunter then
+                        /cast [mod] {{api.spell.ConcussiveShot}}; {{api.spell.CounterShot}}
+                    elseif api.player.isPaladin then
+                        if api.player.isRetribution then
+                            /cast [mod] {{api.spell.HandOfHindrance}}; {{api.spell.Rebuke}}
+                        else
+                            /cast {{api.spell.Rebuke}}
                         end
                     end
                 ]],
